@@ -50,18 +50,25 @@ prompt = ChatPromptTemplate.from_messages([
     ("human", "Question: {question}\n\nContext:\n{context}")
 ])
 
-# 5) Chain
+# --- Educational Note: Step 5 - Chain Definition ---
+# llm: Our main generative model (gpt-4o-mini).
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+
+# A small helper to join all the retrieved Document texts into a single string.
 def format_docs(docs): return "\n\n".join(d.page_content for d in docs)
 
+# RunnableParallel allows us to fetch the 'context' (via our retriever)
+# AND pass the user's 'question' through simultaneously, preparing both for the prompt.
 parallel = RunnableParallel({
     "context": retriever | RunnableLambda(format_docs),
     "question": RunnablePassthrough()
 })
 
+# The final chain: Parallel fetching -> Prompt formatting -> LLM generation -> String output
 chain = parallel | prompt | llm | StrOutputParser()
 
-# 6) Ask questions
+# --- Educational Note: Step 6 - Execution Loop ---
+# This simple loop lets you interact with the RAG pipeline continuously.
 print("PDF RAG ready. Ask a question (or Ctrl+C to exit).")
 q = input("\nQ: ")
 ans = chain.invoke(q.strip())
