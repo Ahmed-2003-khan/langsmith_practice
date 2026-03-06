@@ -31,10 +31,14 @@ prompt2 = PromptTemplate(
     input_variables=['text']
 )
 
+# --- Educational Note: Models and Parsers ---
+# model1 uses 'gpt-4o-mini' with a higher temperature (0.7) for more creative report generation.
 model1 = ChatOpenAI(model='gpt-4o-mini', temperature=0.7)
 
+# model2 uses 'gpt-4o' with a lower temperature (0.4) for a more focused, concise 5 point summary.
 model2 = ChatOpenAI(model='gpt-4o', temperature=0.4)
 
+# parser converts the raw AIMessage output from the models into a plain Python string.
 parser = StrOutputParser()
 
 chain = prompt1 | model1 | parser | prompt2 | model2 | parser
