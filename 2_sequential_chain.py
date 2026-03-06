@@ -41,6 +41,15 @@ model2 = ChatOpenAI(model='gpt-4o', temperature=0.4)
 # parser converts the raw AIMessage output from the models into a plain Python string.
 parser = StrOutputParser()
 
+# --- Educational Note: LangChain Expression Language (LCEL) ---
+# The '|' operator chains these components together sequentially.
+# Flow: 
+# 1. prompt1 formats the input topic into a full prompt string.
+# 2. model1 generates a detailed report based on prompt1.
+# 3. parser extracts the string from model1's output.
+# 4. prompt2 takes that string (as 'text') and formats the summary prompt.
+# 5. model2 generates the 5 point summary.
+# 6. parser extracts the final string summary.
 chain = prompt1 | model1 | parser | prompt2 | model2 | parser
 
 config = {
