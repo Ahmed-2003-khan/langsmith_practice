@@ -1,8 +1,20 @@
+# --- Educational Note: Imports ---
+# ChatOpenAI: The main class for interacting with OpenAI models in LangChain.
+# load_dotenv: Loads environment variables (like API keys) from a .env file.
+# PromptTemplate: Allows creating generic template strings with slot placeholders for dynamic values.
+# StrOutputParser: Extracts just the string content from an LLM response message.
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+import os 
 
+# --- Educational Note: LangSmith Setup ---
+# Setting the LANGCHAIN_PROJECT environment variable logs our trace in LangSmith under a specific project.
+# This drastically enhances visibility and debugging!
+os.environ['LANGCHAIN_PROJECT'] = 'Sequential LLM app'
+
+# Loads the .env variables natively
 load_dotenv()
 
 prompt1 = PromptTemplate(
@@ -15,12 +27,22 @@ prompt2 = PromptTemplate(
     input_variables=['text']
 )
 
-model = ChatOpenAI()
+model1 = ChatOpenAI(model='gpt-4o-mini', temperature=0.7)
+
+model2 = ChatOpenAI(model='gpt-4o', temperature=0.4)
 
 parser = StrOutputParser()
 
-chain = prompt1 | model | parser | prompt2 | model | parser
+chain = prompt1 | model1 | parser | prompt2 | model2 | parser
 
-result = chain.invoke({'topic': 'Unemployment in India'})
+config = {
+    'tags' : ['llm app', 'report generation', 'summarization'],
+    'metadata' : {
+        'version' : '1.0.0',
+        'author' : 'John Doe'
+    }
+}
+
+result = chain.invoke({'topic': 'Unemployment in India'}, config=config)
 
 print(result)
