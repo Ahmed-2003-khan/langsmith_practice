@@ -1,10 +1,5 @@
 # pip install -U langchain langchain-openai langchain-community faiss-cpu pypdf python-dotenv
 
-# --- Educational Note: Imports and Setup ---
-# We are importing various tools from LangChain:
-# PyPDFLoader: Extracts text from PDF files.
-# FAISS: A fast and efficient local vector database for storing embeddings.
-# OpenAIEmbeddings: Converts text into continuous numerical vectors (embeddings).
 import os
 from dotenv import load_dotenv
 from langchain_community.document_loaders import PyPDFLoader
@@ -15,60 +10,43 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableParallel, RunnablePassthrough, RunnableLambda
 from langchain_core.output_parsers import StrOutputParser
 
-# By setting LANGCHAIN_PROJECT, we tell LangSmith to track all executions of this app under this specific project name.
 os.environ['LANGCHAIN_PROJECT'] = 'RAG app'
 
 load_dotenv()  # expects OPENAI_API_KEY in .env
 
 PDF_PATH = "islr.pdf"  # <-- change to your PDF filename
 
-# --- Educational Note: Step 1 - Load PDF ---
-# PyPDFLoader reads the PDF and returns a list of LangChain 'Document' objects.
-# By default, it creates one Document object per page of the PDF.
+# 1) Load PDF
 loader = PyPDFLoader(PDF_PATH)
 docs = loader.load()
 
-# --- Educational Note: Step 2 - Chunking ---
-# Large texts must be split into smaller, overlapping chunks so they fit in the LLM's context window
-# and so vector searches can find specific relevant passages. The overlap preserves context across boundaries.
+# 2) Chunk
 splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=150)
 splits = splitter.split_documents(docs)
 
-# --- Educational Note: Step 3 - Embed and Index ---
-# Here we use an OpenAI model to turn text chunks into embeddings.
+# 3) Embed + index
 emb = OpenAIEmbeddings(model="text-embedding-3-small")
-# FAISS takes those embeddings and lets us query them fast based on "similarity" to a user's question.
 vs = FAISS.from_documents(splits, emb)
-# We make it a 'retriever', specifically asking it to fetch the top 4 most similar chunks ('k': 4).
 retriever = vs.as_retriever(search_type="similarity", search_kwargs={"k": 4})
 
-# --- Educational Note: Step 4 - Prompt Formulation ---
-# This sets up the template for how we want the language model to behave.
-# It enforces that the bot only uses the retrieved context to answer the human's question.
+# 4) Prompt
 prompt = ChatPromptTemplate.from_messages([
     ("system", "Answer ONLY from the provided context. If not found, say you don't know."),
     ("human", "Question: {question}\n\nContext:\n{context}")
 ])
 
-# --- Educational Note: Step 5 - Chain Definition ---
-# llm: Our main generative model (gpt-4o-mini).
+# 5) Chain
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
-
-# A small helper to join all the retrieved Document texts into a single string.
 def format_docs(docs): return "\n\n".join(d.page_content for d in docs)
 
-# RunnableParallel allows us to fetch the 'context' (via our retriever)
-# AND pass the user's 'question' through simultaneously, preparing both for the prompt.
 parallel = RunnableParallel({
     "context": retriever | RunnableLambda(format_docs),
     "question": RunnablePassthrough()
 })
 
-# The final chain: Parallel fetching -> Prompt formatting -> LLM generation -> String output
 chain = parallel | prompt | llm | StrOutputParser()
 
-# --- Educational Note: Step 6 - Execution Loop ---
-# This simple loop lets you interact with the RAG pipeline continuously.
+# 6) Ask questions
 print("PDF RAG ready. Ask a question (or Ctrl+C to exit).")
 q = input("\nQ: ")
 ans = chain.invoke(q.strip())
