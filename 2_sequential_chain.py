@@ -52,6 +52,9 @@ parser = StrOutputParser()
 # 6. parser extracts the final string summary.
 chain = prompt1 | model1 | parser | prompt2 | model2 | parser
 
+# --- Educational Note: Configuration ---
+# You can pass a config dictionary to add specific tracing metadata.
+# 'tags' and 'metadata' will be visible in LangSmith, making it easy to filter and analyze runs.
 config = {
     'tags' : ['llm app', 'report generation', 'summarization'],
     'metadata' : {
@@ -60,6 +63,9 @@ config = {
     }
 }
 
+# --- Educational Note: Invocation ---
+# chain.invoke runs the data through the entire pipeline:
+# The dictionary {'topic': 'Unemployment in India'} maps to the {topic} variable in prompt1.
 result = chain.invoke({'topic': 'Unemployment in India'}, config=config)
 
 print(result)
