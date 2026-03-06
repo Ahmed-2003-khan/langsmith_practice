@@ -28,16 +28,23 @@ PDF_PATH = "islr.pdf"  # <-- change to your PDF filename
 loader = PyPDFLoader(PDF_PATH)
 docs = loader.load()
 
-# 2) Chunk
+# --- Educational Note: Step 2 - Chunking ---
+# Large texts must be split into smaller, overlapping chunks so they fit in the LLM's context window
+# and so vector searches can find specific relevant passages. The overlap preserves context across boundaries.
 splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=150)
 splits = splitter.split_documents(docs)
 
-# 3) Embed + index
+# --- Educational Note: Step 3 - Embed and Index ---
+# Here we use an OpenAI model to turn text chunks into embeddings.
 emb = OpenAIEmbeddings(model="text-embedding-3-small")
+# FAISS takes those embeddings and lets us query them fast based on "similarity" to a user's question.
 vs = FAISS.from_documents(splits, emb)
+# We make it a 'retriever', specifically asking it to fetch the top 4 most similar chunks ('k': 4).
 retriever = vs.as_retriever(search_type="similarity", search_kwargs={"k": 4})
 
-# 4) Prompt
+# --- Educational Note: Step 4 - Prompt Formulation ---
+# This sets up the template for how we want the language model to behave.
+# It enforces that the bot only uses the retrieved context to answer the human's question.
 prompt = ChatPromptTemplate.from_messages([
     ("system", "Answer ONLY from the provided context. If not found, say you don't know."),
     ("human", "Question: {question}\n\nContext:\n{context}")
