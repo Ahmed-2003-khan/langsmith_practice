@@ -17,11 +17,15 @@ os.environ['LANGCHAIN_PROJECT'] = 'Sequential LLM app'
 # Loads the .env variables natively
 load_dotenv()
 
+# --- Educational Note: Prompt Templates ---
+# Prompts are instructions given to an LLM. Here we use PromptTemplates to build dynamic prompts.
+# prompt1 takes in a 'topic' variable and tells the model to write a detailed report about it.
 prompt1 = PromptTemplate(
     template='Generate a detailed report on {topic}',
     input_variables=['topic']
 )
 
+# prompt2 takes the 'text' (generated from prompt1's model) and asks the next model to summarize it.
 prompt2 = PromptTemplate(
     template='Generate a 5 pointer summary from the following text \n {text}',
     input_variables=['text']
