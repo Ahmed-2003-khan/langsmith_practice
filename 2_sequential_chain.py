@@ -43,6 +43,10 @@ parser = StrOutputParser()
 # Flow: prompt1 -> model1 -> parser -> prompt2 -> model2 -> final string output
 chain = prompt1 | model1 | parser | prompt2 | model2 | parser
 
+# --- Educational Note: Configuration and Execution ---
+# You can pass a config dictionary to add specific tracing metadata.
+# 'run_name' changes the display name in LangSmith.
+# 'tags' and 'metadata' will be visible in LangSmith, making it easy to filter and analyze runs.
 config = {
     'run_name': 'Sequential Chain',
     'tags' : ['llm app', 'report generation', 'summarization'],
@@ -52,6 +56,8 @@ config = {
     }
 }
 
+# chain.invoke runs the data through the entire pipeline:
+# The dictionary {'topic': 'Unemployment in India'} maps to the {topic} variable in prompt1.
 result = chain.invoke({'topic': 'Unemployment in India'}, config=config)
 
 print(result)
