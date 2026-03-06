@@ -1,52 +1,31 @@
-# --- Educational Note: Imports and Setup ---
-# ChatOpenAI: The main class for interacting with OpenAI models in LangChain.
-# load_dotenv: Loads environment variables (like API keys) from a .env file.
-# PromptTemplate: Allows creating generic template strings with slot placeholders for dynamic values.
-# StrOutputParser: Extracts just the string content from an LLM response message.
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 import os 
 
-# Setting the LANGCHAIN_PROJECT environment variable logs our trace in LangSmith under a specific project.
-# This drastically enhances visibility and debugging!
 os.environ['LANGCHAIN_PROJECT'] = 'Sequential LLM app'
 
 load_dotenv()
 
-# --- Educational Note: Prompt Templates ---
-# Prompts are instructions given to an LLM. Here we use PromptTemplates to build dynamic prompts.
-# prompt1 takes in a 'topic' variable and tells the model to write a detailed report about it.
 prompt1 = PromptTemplate(
     template='Generate a detailed report on {topic}',
     input_variables=['topic']
 )
 
-# prompt2 takes the 'text' (generated from prompt1's model) and asks the next model to summarize it.
 prompt2 = PromptTemplate(
     template='Generate a 5 pointer summary from the following text \n {text}',
     input_variables=['text']
 )
 
-# --- Educational Note: Models and Chain Formation ---
-# model1 uses 'gpt-4o-mini' with a higher temperature (0.7) for more creative report generation.
 model1 = ChatOpenAI(model='gpt-4o-mini', temperature=0.7)
 
-# model2 uses 'gpt-4o' with a lower temperature (0.4) for a more focused, concise 5 point summary.
 model2 = ChatOpenAI(model='gpt-4o', temperature=0.4)
 
-# parser converts the raw AIMessage output from the models into a plain Python string.
 parser = StrOutputParser()
 
-# LangChain Expression Language (LCEL) uses the '|' operator to chain these components together sequentially.
-# Flow: prompt1 -> model1 -> parser -> prompt2 -> model2 -> final string output
 chain = prompt1 | model1 | parser | prompt2 | model2 | parser
 
-# --- Educational Note: Configuration and Execution ---
-# You can pass a config dictionary to add specific tracing metadata.
-# 'run_name' changes the display name in LangSmith.
-# 'tags' and 'metadata' will be visible in LangSmith, making it easy to filter and analyze runs.
 config = {
     'run_name': 'Sequential Chain',
     'tags' : ['llm app', 'report generation', 'summarization'],
@@ -56,8 +35,6 @@ config = {
     }
 }
 
-# chain.invoke runs the data through the entire pipeline:
-# The dictionary {'topic': 'Unemployment in India'} maps to the {topic} variable in prompt1.
 result = chain.invoke({'topic': 'Unemployment in India'}, config=config)
 
 print(result)
