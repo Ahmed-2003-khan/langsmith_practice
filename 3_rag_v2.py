@@ -22,17 +22,12 @@ load_dotenv()
 
 PDF_PATH = "islr.pdf"  # change to your file
 
-# ---------- Educational Note: Traced Setup Steps ----------
-# The @traceable decorator automatically logs the inputs, outputs, and execution time of these functions to LangSmith.
-# We also attach 'tags' and 'metadata' to help filter or analyze these specific setup steps later in the LangSmith UI.
-
-# This function loads the PDF. Tagged as 'setup' with metadata specifying the loader used.
+# ---------- traced setup steps ----------
 @traceable(name="load_pdf", tags=["setup"], metadata={'loader': 'PyPDFLoader'})
 def load_pdf(path: str):
     loader = PyPDFLoader(path)
     return loader.load()  # list[Document]
 
-# This function splits the loaded documents into smaller chunks.
 @traceable(name="split_documents", tags=["setup"], metadata={'splitter': 'RecursiveCharacterTextSplitter'})
 def split_documents(docs, chunk_size=1000, chunk_overlap=150):
     splitter = RecursiveCharacterTextSplitter(
@@ -40,7 +35,6 @@ def split_documents(docs, chunk_size=1000, chunk_overlap=150):
     )
     return splitter.split_documents(docs)
 
-# This function takes the text chunks, embeds them via OpenAI, and indexes them in a FAISS vector database.
 @traceable(name="build_vectorstore", tags=["setup"], metadata={'vectorstore': 'FAISS'})
 def build_vectorstore(splits):
     emb = OpenAIEmbeddings(model="text-embedding-3-small")
@@ -48,9 +42,7 @@ def build_vectorstore(splits):
     vs = FAISS.from_documents(splits, emb)
     return vs
 
-# --- Educational Note: Umbrella Pipeline ---
-# You can also trace an entire “setup” umbrella span.
-# Because this function calls other @traceable functions, LangSmith will display a nested trace hierarchy!
+# You can also trace a “setup” umbrella span if you want:
 @traceable(name="setup_pipeline")
 def setup_pipeline(pdf_path: str):
     docs = load_pdf(pdf_path)
@@ -58,44 +50,33 @@ def setup_pipeline(pdf_path: str):
     vs = build_vectorstore(splits)
     return vs
 
-# ---------- Educational Note: Pipeline Creation ----------
-# The 'llm' is the heart of the generative part of RAG. We use a low temperature for more factual, deterministic answers.
+# ---------- pipeline ----------
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
-# The 'prompt' enforces that the bot only uses the retrieved context to answer the human's question.
 prompt = ChatPromptTemplate.from_messages([
     ("system", "Answer ONLY from the provided context. If not found, say you don't know."),
     ("human", "Question: {question}\n\nContext:\n{context}")
 ])
 
-# 'format_docs' is a simple helper function taking the retrieved Document objects 
-# and joining their raw page_content into a single large string for the prompt.
 def format_docs(docs):
     return "\n\n".join(d.page_content for d in docs)
 
-# --- Educational Note: Retrieval and Chain Setup ---
 # Build the index under traced setup
 vectorstore = setup_pipeline(PDF_PATH)
-# This turns our FAISS vector database into a LangChain 'retriever'.
 retriever = vectorstore.as_retriever(search_type="similarity", search_kwargs={"k": 4})
 
-# RunnableParallel concurrently prepares the context (by routing the question through the retriever and formatting the docs)
-# while passing the question itself directly through.
 parallel = RunnableParallel({
     "context": retriever | RunnableLambda(format_docs),
     "question": RunnablePassthrough(),
 })
 
-# LCEL: Data flows sequentially from left to right.
-# parallel yields {'context': ..., 'question': ...} -> prompt formats it into a ChatPromptValue -> llm generates the AIMessage -> StrOutputParser extracts the text.
 chain = parallel | prompt | llm | StrOutputParser()
 
-# ---------- Educational Note: Execution and Runtime Tracing ----------
+# ---------- run a query (also traced) ----------
 print("PDF RAG ready. Ask a question (or Ctrl+C to exit).")
 q = input("\nQ: ").strip()
 
-# Give the visible run name + tags/metadata so it’s easy to find in the LangSmith UI:
-# The `run_name` here will be assigned to the root trace of this specific pipeline execution.
+# Give the visible run name + tags/metadata so it’s easy to find:
 config = {
     "run_name": "pdf_rag_query"
 }
