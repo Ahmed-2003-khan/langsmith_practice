@@ -22,20 +22,26 @@ load_dotenv()
 
 PDF_PATH = "islr.pdf"  # change to your file
 
-# ---------- traced setup steps ----------
-@traceable(name="load_pdf")
+# ---------- Educational Note: Traced Setup Steps ----------
+# The @traceable decorator automatically logs the inputs, outputs, and execution time of these functions to LangSmith.
+# We also attach 'tags' and 'metadata' to help filter or analyze these specific setup steps later in the LangSmith UI.
+
+# This function loads the PDF. Tagged as 'setup' with metadata specifying the loader used.
+@traceable(name="load_pdf", tags=["setup"], metadata={'loader': 'PyPDFLoader'})
 def load_pdf(path: str):
     loader = PyPDFLoader(path)
     return loader.load()  # list[Document]
 
-@traceable(name="split_documents")
+# This function splits the loaded documents into smaller chunks.
+@traceable(name="split_documents", tags=["setup"], metadata={'splitter': 'RecursiveCharacterTextSplitter'})
 def split_documents(docs, chunk_size=1000, chunk_overlap=150):
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size, chunk_overlap=chunk_overlap
     )
     return splitter.split_documents(docs)
 
-@traceable(name="build_vectorstore")
+# This function takes the text chunks, embeds them via OpenAI, and indexes them in a FAISS vector database.
+@traceable(name="build_vectorstore", tags=["setup"], metadata={'vectorstore': 'FAISS'})
 def build_vectorstore(splits):
     emb = OpenAIEmbeddings(model="text-embedding-3-small")
     # FAISS.from_documents internally calls the embedding model:
