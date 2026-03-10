@@ -48,7 +48,9 @@ def build_vectorstore(splits):
     vs = FAISS.from_documents(splits, emb)
     return vs
 
-# You can also trace a “setup” umbrella span if you want:
+# --- Educational Note: Umbrella Pipeline ---
+# You can also trace an entire “setup” umbrella span.
+# Because this function calls other @traceable functions, LangSmith will display a nested trace hierarchy!
 @traceable(name="setup_pipeline")
 def setup_pipeline(pdf_path: str):
     docs = load_pdf(pdf_path)
@@ -56,14 +58,18 @@ def setup_pipeline(pdf_path: str):
     vs = build_vectorstore(splits)
     return vs
 
-# ---------- pipeline ----------
+# ---------- Educational Note: Pipeline Creation ----------
+# The 'llm' is the heart of the generative part of RAG. We use a low temperature for more factual, deterministic answers.
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
+# The 'prompt' enforces that the bot only uses the retrieved context to answer the human's question.
 prompt = ChatPromptTemplate.from_messages([
     ("system", "Answer ONLY from the provided context. If not found, say you don't know."),
     ("human", "Question: {question}\n\nContext:\n{context}")
 ])
 
+# 'format_docs' is a simple helper function taking the retrieved Document objects 
+# and joining their raw page_content into a single large string for the prompt.
 def format_docs(docs):
     return "\n\n".join(d.page_content for d in docs)
 
