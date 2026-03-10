@@ -73,22 +73,29 @@ prompt = ChatPromptTemplate.from_messages([
 def format_docs(docs):
     return "\n\n".join(d.page_content for d in docs)
 
+# --- Educational Note: Retrieval and Chain Setup ---
 # Build the index under traced setup
 vectorstore = setup_pipeline(PDF_PATH)
+# This turns our FAISS vector database into a LangChain 'retriever'.
 retriever = vectorstore.as_retriever(search_type="similarity", search_kwargs={"k": 4})
 
+# RunnableParallel concurrently prepares the context (by routing the question through the retriever and formatting the docs)
+# while passing the question itself directly through.
 parallel = RunnableParallel({
     "context": retriever | RunnableLambda(format_docs),
     "question": RunnablePassthrough(),
 })
 
+# LCEL: Data flows sequentially from left to right.
+# parallel yields {'context': ..., 'question': ...} -> prompt formats it into a ChatPromptValue -> llm generates the AIMessage -> StrOutputParser extracts the text.
 chain = parallel | prompt | llm | StrOutputParser()
 
-# ---------- run a query (also traced) ----------
+# ---------- Educational Note: Execution and Runtime Tracing ----------
 print("PDF RAG ready. Ask a question (or Ctrl+C to exit).")
 q = input("\nQ: ").strip()
 
-# Give the visible run name + tags/metadata so it’s easy to find:
+# Give the visible run name + tags/metadata so it’s easy to find in the LangSmith UI:
+# The `run_name` here will be assigned to the root trace of this specific pipeline execution.
 config = {
     "run_name": "pdf_rag_query"
 }
